@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "686538696549",
+    "project_id": "gunjon-143",
+    "storage_bucket": "gunjon-143.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:686538696549:android:c1570a67e3f0f0db4d638c",
+        "android_client_info": {
+          "package_name": "com.adi.gunjon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhAITcMvzua7_3MftNcO79lkxXiewHp7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
