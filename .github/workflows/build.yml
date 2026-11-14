@@ -1,0 +1,53 @@
+name: Build Gunjon
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code নামানো
+        uses: actions/checkout@v4
+
+      - name: Java সেটআপ
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Flutter সেটআপ
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Android ও Web ফোল্ডার বানানো
+        run: flutter create --org com.adi --project-name gunjon --platforms=android,web .
+
+      - name: Internet permission যোগ করা
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+
+      - name: প্যাকেজ নামানো
+        run: flutter pub get
+
+      - name: APK বানানো
+        run: flutter build apk --release
+
+      - name: Web বানানো
+        run: flutter build web --release
+
+      - name: APK সেভ করা
+        uses: actions/upload-artifact@v4
+        with:
+          name: gunjon-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Web ফাইল সেভ করা
+        uses: actions/upload-artifact@v4
+        with:
+          name: gunjon-web
+          path: build/web
