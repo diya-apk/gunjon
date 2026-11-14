@@ -20,6 +20,11 @@ jobs:
       - name: Code নামানো
         uses: actions/checkout@v4
 
+      - name: স্থায়ী চাবি (keystore) বসানো
+        run: |
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+
       - name: Java সেটআপ
         uses: actions/setup-java@v5
         with:
