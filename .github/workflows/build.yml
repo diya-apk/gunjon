@@ -13,9 +13,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Code নামানো
         uses: actions/checkout@v4
@@ -75,6 +72,14 @@ jobs:
         with:
           path: build/web
 
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Web অনলাইনে দেওয়া
         id: deployment
         uses: actions/deploy-pages@v4
