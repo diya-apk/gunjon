@@ -5,9 +5,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Code নামানো
         uses: actions/checkout@v4
@@ -31,7 +39,7 @@ jobs:
         run: |
           sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' android/app/src/main/AndroidManifest.xml
 
-      - name: Lint বন্ধ করা (এটাই আগের ভুলের সমাধান)
+      - name: Lint বন্ধ করা
         run: |
           if [ -f android/app/build.gradle.kts ]; then
             printf '\nandroid {\n    lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }\n}\n' >> android/app/build.gradle.kts
@@ -46,7 +54,7 @@ jobs:
         run: flutter build apk --release
 
       - name: Web বানানো
-        run: flutter build web --release
+        run: flutter build web --release --base-href "/gunjon/"
 
       - name: APK সেভ করা
         uses: actions/upload-artifact@v4
@@ -54,8 +62,14 @@ jobs:
           name: gunjon-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Web ফাইল সেভ করা
-        uses: actions/upload-artifact@v4
+      - name: Pages সেটআপ
+        uses: actions/configure-pages@v5
+
+      - name: Web ফাইল আপলোড
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: gunjon-web
           path: build/web
+
+      - name: Web অনলাইনে দেওয়া
+        id: deployment
+        uses: actions/deploy-pages@v4
