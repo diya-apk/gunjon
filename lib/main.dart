@@ -112,6 +112,12 @@ class _LoginPageState extends State<LoginPage> {
         return 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের দিন।';
       case 'network-request-failed':
         return 'ইন্টারনেট সংযোগ নেই।';
+      case 'account-exists-with-different-credential':
+        return 'এই ইমেইলে অন্য পদ্ধতিতে অ্যাকাউন্ট খোলা আছে।';
+      case 'operation-not-allowed':
+        return 'Firebase-এ Google লগইন এখনো চালু করা হয়নি।';
+      case 'unauthorized-domain':
+        return 'এই ওয়েবসাইটের ঠিকানা Firebase-এ অনুমোদিত নয়।';
       default:
         return 'সমস্যা হয়েছে (${e.code})';
     }
@@ -157,6 +163,55 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _error = _bangla(e));
     } catch (e) {
       setState(() => _error = 'সমস্যা হয়েছে: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final provider = GoogleAuthProvider()
+        ..addScope('email')
+        ..setCustomParameters({'prompt': 'select_account'});
+
+      final UserCredential cred = kIsWeb
+          ? await FirebaseAuth.instance.signInWithPopup(provider)
+          : await FirebaseAuth.instance.signInWithProvider(provider);
+
+      final user = cred.user;
+      if (user != null) {
+        final data = <String, dynamic>{
+          'name': (user.displayName != null && user.displayName!.isNotEmpty)
+              ? user.displayName
+              : (user.email ?? 'নামহীন'),
+          'email': user.email ?? '',
+          'photoUrl': user.photoURL ?? '',
+        };
+        if (cred.additionalUserInfo?.isNewUser ?? false) {
+          data['createdAt'] = FieldValue.serverTimestamp();
+        }
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(data, SetOptions(merge: true));
+      }
+    } on FirebaseAuthException catch (e) {
+      const ignored = [
+        'popup-closed-by-user',
+        'cancelled-popup-request',
+        'web-context-canceled',
+        'web-context-cancelled',
+      ];
+      if (mounted && !ignored.contains(e.code)) {
+        setState(() => _error = _bangla(e));
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'সমস্যা হয়েছে: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -240,6 +295,27 @@ class _LoginPageState extends State<LoginPage> {
                           : Text(_isSignUp ? 'অ্যাকাউন্ট খুলুন' : 'লগইন'),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: const [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('অথবা'),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: _loading ? null : _googleSignIn,
+                      icon: const Icon(Icons.account_circle_outlined),
+                      label: const Text('Google দিয়ে লগইন'),
+                    ),
+                  ),
                   TextButton(
                     onPressed: _loading
                         ? null
@@ -273,10 +349,29 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('গুঞ্জন'),
         actions: [
-          IconButton(
-            tooltip: 'লগআউট',
-            icon: const Icon(Icons.logout),
-            onPressed: () => FirebaseAuth.instance.signOut(),
+          PopupMenuButton<String>(
+            tooltip: 'অ্যাকাউন্ট',
+            icon: const Icon(Icons.account_circle),
+            onSelected: (value) => FirebaseAuth.instance.signOut(),
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                child: Text(
+                  (me.displayName != null && me.displayName!.isNotEmpty)
+                      ? '${me.displayName}\n${me.email ?? ''}'
+                      : (me.email ?? ''),
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'switch',
+                child: Text('অন্য অ্যাকাউন্টে লগইন করুন'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('লগআউট'),
+              ),
+            ],
           ),
         ],
       ),
